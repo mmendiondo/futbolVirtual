@@ -29,6 +29,13 @@ var clients = [];
 
 io.on('connection', function(socket){
 
+	clients.push(socket);
+
+	socket.on('disconnect', function() {
+		var i = clients.indexOf(socket);
+		delete clients[i];
+	});
+
 	socket.on('chat message', function(msg){
 		io.emit('chat message', msg);
 	});
@@ -40,7 +47,7 @@ io.on('connection', function(socket){
 		var foundTeam = false;
 		for(var player in match.positionsTeam1)
 		{
-			if(match.positionsTeam1[player].userName == ""){
+			if(match.positionsTeam1[player].userName === ""){
 				match.positionsTeam1[player].userName = _userName;
 				obj.team = "1";
 				obj.position = match.positionsTeam2[player].position;
@@ -60,13 +67,14 @@ io.on('connection', function(socket){
 			}
 		}
 
-		clients.push(socket);
 		socket.emit('game connected', JSON.stringify(obj));
 	});
 
 	socket.on('game action', function(msg){
 		var actions = resolveGameAction(msg);
-		clients[0].emit('game available actions', actions);
+
+		var i = clients.indexOf(socket);
+		clients[i].emit('game available actions', actions);
 		//io.emit('game available actions', actions);
 	});
 
@@ -79,7 +87,6 @@ function resolveGameAction(message)
 	//here resolve
 		var obj = JSON.parse(message);
 
-		console.log(obj);
 		var action = obj.action;
 		var userName = obj.userName;
 		var actions = [];
