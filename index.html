@@ -7,13 +7,22 @@
       body { font: 13px Helvetica, Arial; }
       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
       form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px;  }
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
+      .modalBox{background: #222;color:white;padding:20px;width:300px;height:130px;font-weight:bold;text-align: center;display: none;}
+      input{background:white;padding:4px;color: #222;font-weight: bold;width: 90%;margin:5px auto;}
     </style>
   </head>
   <body>
+
+    <div class="modalBox">
+      <div>Ingresa tu nombre de usuario</div>
+      <div><input type="text" id="userName" /></div>
+      <div><input type="button" id="accept" value="Entrar" onclick="connectPlayer();"/></div>
+    </div>
+
     <button id="authorize">Authorize notification</button>
     <button id="show">Show notification</button>
 
@@ -25,7 +34,18 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-      var socket = io();
+
+      jQuery.fn.center = function () {
+        this.css("position","absolute");
+        this.css("top", Math.max(0, (($(window).height() - $(this).outerHeight()) / 2) +                                                    $(window).scrollTop()) + "px");
+        this.css("left", Math.max(0, (($(window).width() - $(this).outerWidth()) / 2) +                                                    $(window).scrollLeft()) + "px");
+        return this;
+      }
+
+      var alreadyPlaying = false,
+      userName = "",
+      position = "",
+      socket = io();
 
       $('form').submit(function(){
         socket.emit('chat message', $('#m').val());
@@ -39,52 +59,68 @@
 
       socket.on('game available actions', function(msg){
 
+        var availableActions = JSON.parse(msg);
+        $(availableActions).each(function()
+        {
+          showNotification(this);
+        });
         //msg as json collect available actions and show notifications
-
         //msg.tojson each(showNotification(this.action));
-        showNotification("Patear al arco");
-        showNotification("Dar Pase");
-        showNotification("Correr");
-
+        // showNotification("Patear al arco");
+        // showNotification("Dar Pase");
+        // showNotification("Correr");
       });
 
+      ///region conections
+
+      function connectPlayer()
+      {
+          // Identify user and send to conect
+          var msg=JSON.stringify({"userName":$("#userName").val()});
+          socket.emit('connect game', msg);
+      }
+
+      socket.on('game connected', function(msg){
+          $(".modalBox").html("<div style='padding-top:30px;'>Ya estás Jugando!</div>");
+          alreadyPlaying = true;
+          $(".modalBox").slideUp(1000);
+          userName = JSON.parse(msg).userName;
+          position =  JSON.parse(msg).position;
+      });
 
       function authorizeNotification() {
         Notification.requestPermission(function(perm) {
-          alert("jugando ;)");
-          // Identify user and send to conect
-          socket.emit('game connected', $('#m').val());
-        });
+          (perm === "granted")
+            $(".modalBox").center().show();
+            if (alreadyPlaying) $(".modalBox").slideUp(1000);
+          });
       }
 
       $("#authorize").click(function() { authorizeNotification();});
 
+      ///region conections
       function showNotification(action) {
         var notification = new Notification(action, {
             dir: "auto",
             lang: "es",
-            title: "FUTBOLLLL ONDISSSSS",
+            body: "Futbol Virtual: ",
             tag: action,
             icon: "http://www.picgifs.com/sport-graphics/sport-graphics/soccer-players/sport-graphics-soccer-players-103266.gif"
           });
 
-        notification.onclick = function(){
-            //emit action taken with identified user
-            //socket.emit('game action', action + user to json);
-        };
+          notification.onclick = function(){
+            notification.close();
+            socket.emit('game action', JSON.stringify({"action" : action, "userName" : userName, "position": position}));
+          };
 
-        notification.onshow = 
-        setTimeout(function(){notification.close();}, 5000);
+        notification.onshow = setTimeout(function(){notification.close();}, 5000);
       }
 
       //Example as how to show
       $("#show").click(function(){
-
-        showNotification("Patear al arco");
         showNotification("Dar Pase");
-        showNotification("Correr"); 
       });
-     
+
     </script>
   </body>
 </html>
