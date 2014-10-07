@@ -2,46 +2,71 @@ module.exports = {
 
 	playerConnected : function (instance, socket, msg)
 	{
-		instance.sockets[socket.id] = socket;
-		instance.informSockets = [socket];
-
-		saveInstance(instance);
+		var socketId = socket.id;
+		instance.sockets[socketId] = socket;
 
 		var player = {};
 		player.userName = JSON.parse(msg).userName;
-		player.socketId = socket.id;
+		player.socketId = socketId;
 		player.team = Object.keys(instance.players).length % 2;
 
-		instance.players[socket.id] = player;
+		instance.players[socketId] = player;
 		instance.currentPlayer = player;
-		return instance;
+
+		saveInstance(instance);
+
+		var obj = {};
+		obj.messages = {};
+		obj.informSockets = [];
+		obj.informSockets.push(socket);
+
+		if(Object.keys(instance.sockets).length > 2)
+		{
+			obj.messages.message = "Empezó - a jugar";
+			obj.messages.player = player;
+		}
+		else{
+			obj.messages.message = "Faltan jugadores";
+			obj.messages.player = player;
+		}
+
+		return obj;
 	},
 
 	resolveGameAction : function (instance, socket, msg)
 	{
+		var socketId = socket.id;
+		instance.currentPlayer = instance.players[socketId];
 
-		instance.currentPlayer = instance.players[socket.id];
+		instance.playsCount += 1;
 
-		saveInstance(instance);
 		var obj = JSON.parse(msg);
 
-		saveEjecutant(instance.players[socket.id]);
-		saveEjecutantFriend(getFriend(instance.players[socket.id]));
-		saveEnemy(getEnemy(instance.players[socket.id]));
+		saveEjecutant(instance.players[socketId]);
+		saveEjecutantFriend(getFriend(instance.players[socketId]));
+		saveEnemy(getEnemy(instance.players[socketId]));
 
-		switch(obj.action)
+		switch(instance.playsCount)
+		{
+			case instance.finishAtPlaysCount:
+				return resolveFinaliza();
+		}
+
+		saveInstance(instance);
+
+		switch(obj.tag)
 		{
 			case "pase" :
 				return resolvePase();
-			case "gambetear" :
+			case "gambeta" :
 				return resolveGambeta();
-			case "atajar" :
+			case "ataja" :
 				return resolveAtaja();
-			case "paterAlArco" :
+			case "patada" :
 				return resolvePatadaAlArco();
-			case "marcar" :
+			case "marca" :
 				return resolveMarca();
-			case "interceptar" :
+			case "intercepta" :
 				return resolveIntercepcion();
 			default : break;
 		}
@@ -58,6 +83,45 @@ module.exports = {
 };
 
 var instance = null;
+
+
+function balonEnPie()
+{
+	var arr = [];
+	arr.push(noti.pasa);
+	arr.push(noti.gambeta);
+	arr.push(noti.patada);
+	return arr;
+}
+
+var noti = {};
+
+noti.pasa = create_notification("pase");
+noti.gambeta = create_notification("gambeta");
+noti.ataja = create_notification("ataja");
+noti.patada = create_notification("patada");
+noti.marca = create_notification("marca");
+noti.intercepta = create_notification("intercepta");
+noti.gol = create_notification("gol");
+noti.empiezaPartido = create_notification("empezo");
+noti.terminaPartido = create_notification("termino");
+
+function default_notification()
+{
+	var noti = {};
+	noti.dir = "auto";
+	noti.lang = "auto";
+	return noti;
+}
+
+function create_notification(tag)
+{
+	var default_noti = default_notification();
+	default_noti.tag = tag;
+	default_noti.icon = tag + ".jpg";
+	return default_noti;
+}
+
 function saveInstance(_instance)
 {
 	instance = _instance;
@@ -97,90 +161,52 @@ function saveEnemy(player)
 	instance.enemy = player;
 }
 
-function resolvePase(){
-
-	//notificar al otro equipo...
+function newResponse(sockets, actions)
+{
 	var obj = {};
-	obj.actions = [];
-	obj.actions.push(noti.intercepta);
-	obj.informSockets = instance.sockets[instance.ejecutant.socketId];
+	obj.actions = actions;
+	obj.informSockets = sockets;
 	return obj;
 }
 
-function resolveGambeta(){
-	//notificar al otro equipo...
-	var obj = {};
-	obj.actions.push(noti.marca);
-	obj.informSockets = instance.sockets[instance.enemy.socketId];
-	return obj;
+function resolveEmpieza()
+{
+	return newResponse(instance.sockets, [noti.empieza]);
 }
 
-function resolveAtaja(){
+function resolveFinaliza()
+{
+	return newResponse(instance.sockets, [noti.finaliza]);
+}
+
+function resolvePase()
+{
+	return newResponse([instance.sockets[instance.ejecutant.socketId]], [noti.intercepta]);
+}
+
+function resolveGambeta()
+{
+	return newResponse([instance.sockets[instance.enemy.socketId]], [noti.marca]);
+}
+
+function resolveAtaja()
+{
 	//es gol o me quedo con la pelota,
 	//si es gol notifico balon en pie al otro equipo
-
-	var obj = {};
-	obj.actions.push(noti.gol);
-	obj.informSockets = instance.sockets[instance.ejecutant.socketId];
-	return obj;
+	return newResponse([instance.sockets[instance.ejecutant.socketId]], [noti.gol]);
 }
 
-function resolvePatadaAlArco(){
-	//notifico al otro equipo
-	var obj = {};
-	obj.actions.push(noti.ataja);
-	obj.informSockets = instance.sockets[instance.enemy.socketId];
-	return obj;
+function resolvePatadaAlArco()
+{
+	return newResponse([instance.sockets[instance.enemy.socketId]], [noti.ataja]);
 }
-function resolveMarca(){
-	var obj = {};
+function resolveMarca()
+{
 	//si marco bien currentplayer ballon en pie
 	//si ejecutante con ballon en pie
-	obj.actions = balonEnPie();
-
-	obj.informSockets = instance.sockets[instance.enemy.socketId];
-	return obj;
+	return newResponse([instance.sockets[instance.enemy.socketId]], balonEnPie());
 }
-function resolveIntercepcion(){
-	var obj = {};
-	//si marco bien currentplayer ballon en pie
-	//si amigo ejecutante con ballon en pie
-	obj.actions = balonEnPie();
-
-	obj.informSockets = instance.sockets[instance.enemy.socketId];
-	return obj;
-}
-
-function balonEnPie()
+function resolveIntercepcion()
 {
-	var arr = [];
-	arr.push(noti.pasa);
-	arr.push(noti.gambeta);
-	arr.push(noti.patada);
-	return arr;
-}
-
-var noti = {};
-
-noti.pasa = create_notification("pase");
-noti.gambeta = create_notification("gambeta");
-noti.ataja = create_notification("ataja");
-noti.patada = create_notification("patada");
-noti.marca = create_notification("marca");
-noti.intercepta = create_notification("intercepta");
-
-function default_notification()
-{
-	var noti = {};
-	noti.dir = "auto";
-	noti.lang = "auto";
-	return noti;
-}
-
-function create_notification(tag)
-{
-	var default_noti = default_notification;
-	default_noti.tag = tag;
-	default_noti.icon = tag + "jpg";
-	return default_noti;
+	return newResponse([instance.sockets[instance.enemy.socketId]], balonEnPie());
 }

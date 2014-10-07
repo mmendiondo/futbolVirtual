@@ -33,15 +33,15 @@ io.on('connection', function(socket){
 	socket.on('connect game', function(msg){
 		var obj = game.playerConnected(instancia, socket, msg);
 
-		for(var i in obj.informSockets){
-			obj.informSockets[i].emit('game connected', JSON.stringify(obj.currentPlayer));
+		for(var i in Object.keys(obj.informSockets)){
+			obj.informSockets[i].emit('game connected', JSON.stringify(obj.messages));
 		}
 	});
 
 	socket.on('game action', function(msg){
 		var obj = game.resolveGameAction(instancia, socket, msg);
 
-		for(var i in obj.informSockets){
+		for(var i in Object.keys(obj.informSockets)){
 			obj.informSockets[i].emit('game available actions', JSON.stringify(obj.actions));
 		}
 	});

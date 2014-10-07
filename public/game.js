@@ -19,7 +19,10 @@ socket.on('chat message', function(msg){
 });
 
 socket.on('game available actions', function(msg){
+
+  console.log(msg);
   var availableActions = JSON.parse(msg);
+
   $(availableActions).each(function()
   {
     showNotification(this);
@@ -39,9 +42,10 @@ socket.on('game connected', function(msg){
 function gameConnected(msg)
 {
     $(".modalBox").html("<div style='padding-top:30px;'>Ya estás Jugando!</div>");
-    Game.player.alreadyPlaying = true;
     $(".modalBox").slideUp(1000);
-    Game.player = JSON.parse(msg);
+    Game.player = JSON.parse(msg).player;
+    Game.player.alreadyPlaying = true;
+    alert(JSON.parse(msg).message);
 }
 
 function authorizeNotification() {
@@ -55,15 +59,15 @@ function authorizeNotification() {
 
 $(document).ready(function() {authorizeNotification();});
 
-$("#show").click(function() {showNotification({"title" :"pase", "action":"pase"});});
+$("#show").click(function() {showNotification({"tag" :"pase"});});
 
 ///region conections
 function showNotification(noti) {
-  var notification = new Notification(noti.title, noti);
+  var notification = new Notification(noti.tag, noti);
 
   notification.onclick = function(){
     notification.close();
-    socket.emit('game action',  JSON.stringify(noti));
+    socket.emit('game action', JSON.stringify(noti));
   };
 
   notification.onshow = setTimeout(function(){notification.close();}, 5000);
