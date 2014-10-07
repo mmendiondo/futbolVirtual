@@ -18,16 +18,6 @@ socket.on('chat message', function(msg){
   $('#messages').append($('<li>').text(msg));
 });
 
-socket.on('game available actions', function(msg){
-
-  console.log(msg);
-  var availableActions = JSON.parse(msg);
-
-  $(availableActions).each(function()
-  {
-    showNotification(this);
-  });
-});
 
 function connectPlayer()
 {
@@ -45,7 +35,19 @@ function gameConnected(msg)
     $(".modalBox").slideUp(1000);
     Game.player = JSON.parse(msg).player;
     Game.player.alreadyPlaying = true;
-    alert(JSON.parse(msg).message);
+
+    swal(
+    {
+      title: JSON.parse(msg).message,
+      text: Game.player.userName,
+      type: JSON.parse(msg).state,
+      showCancelButton: false,
+      confirmButtonColor: "#DD6B55",
+      confirmButtonText: JSON.parse(msg).buttonText },
+      function() {
+        if(JSON.parse(msg).start)
+          showNotification({"tag" :"pase", "fires_action" : true});
+      });
 }
 
 function authorizeNotification() {
@@ -59,15 +61,34 @@ function authorizeNotification() {
 
 $(document).ready(function() {authorizeNotification();});
 
-$("#show").click(function() {showNotification({"tag" :"pase"});});
+var notifications = [];
+
+socket.on('game available actions', function(msg){
+
+  var availableActions = JSON.parse(msg);
+
+  $(availableActions).each(function()
+  {
+    showNotification(this);
+  });
+});
 
 ///region conections
 function showNotification(noti) {
+
   var notification = new Notification(noti.tag, noti);
 
+  notifications.push(notification);
+
   notification.onclick = function(){
-    notification.close();
-    socket.emit('game action', JSON.stringify(noti));
+    $(notification).each(function()
+    {
+      this.close();
+    });
+    notifications = [];
+
+    if(noti.fires_action)
+      socket.emit('game action', JSON.stringify(noti));
   };
 
   notification.onshow = setTimeout(function(){notification.close();}, 5000);

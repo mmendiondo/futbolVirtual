@@ -22,12 +22,18 @@ module.exports = {
 
 		if(Object.keys(instance.sockets).length > 2)
 		{
-			obj.messages.message = "Empezó - a jugar";
+			obj.messages.message = "A Jugar";
 			obj.messages.player = player;
+			obj.messages.state = "success";
+			obj.messages.buttonText = "Empezar partido";
+			obj.messages.start = true;
 		}
 		else{
 			obj.messages.message = "Faltan jugadores";
 			obj.messages.player = player;
+			obj.messages.state = "error";
+			obj.messages.buttonText = "ok";
+			obj.messages.start = false;
 		}
 
 		return obj;
@@ -119,6 +125,7 @@ function create_notification(tag)
 	var default_noti = default_notification();
 	default_noti.tag = tag;
 	default_noti.icon = tag + ".jpg";
+	default_noti.fires_action = true;
 	return default_noti;
 }
 
@@ -193,7 +200,9 @@ function resolveAtaja()
 {
 	//es gol o me quedo con la pelota,
 	//si es gol notifico balon en pie al otro equipo
-	return newResponse([instance.sockets[instance.ejecutant.socketId]], [noti.gol]);
+	var golNoti = noti.gol;
+	golNoti.fires_action = false;
+	return newResponse([instance.sockets[instance.ejecutant.socketId]], [golNoti]);
 }
 
 function resolvePatadaAlArco()

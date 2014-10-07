@@ -23,18 +23,18 @@
       <div><input type="button" id="accept" value="Entrar" onclick="connectPlayer();"/></div>
     </div>
 
-    <button id="authorize">Authorize notification</button>
-    <button id="show">Show notification</button>
-
     <ul id="messages"></ul>
     <form action="">
       <input id="m" autocomplete="off" /><button>Send</button>
     </form>
 
+    <script src="/sweet-alert.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/sweet-alert.css">
     <script src="/socket.io/socket.io.js"></script>
     <script src="/jquery-1.7.2.min.js"></script>
     <script src="/jqueryExtend.js"></script>
     <script src="/game.js"></script>
     <script src="/animation.js"></script>
+
   </body>
 </html>
