@@ -1,5 +1,5 @@
 //instance.js
-function instance(name) {
+function instance() {
     this.sockets = [];
 	this.players = [];
 }
