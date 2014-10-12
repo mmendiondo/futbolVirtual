@@ -1,10 +1,9 @@
 //instance.js
 function instance() {
-    this.sockets = [];
-    this.informSockets = [];
-	this.players = [];
-	instance.playsCount = 0;
-	instance.finishAtPlaysCount = 20;
+	this.players = {};
+	this.sockets = [];
+	this.playsCount = 0;
+	this.finishAtPlaysCount = 20;
 }
 
 module.exports = instance;

@@ -2,25 +2,23 @@ module.exports = {
 
 	playerConnected : function (instance, socket, msg)
 	{
-		var socketId = socket.id;
-		instance.sockets[socketId] = socket;
-
 		var player = {};
+		
+		instance.sockets.push(socket);
 		player.userName = JSON.parse(msg).userName;
-		player.socketId = socketId;
+		player.socket = socket;
 		player.team = Object.keys(instance.players).length % 2;
 
+		var socketId = socket.id;
 		instance.players[socketId] = player;
-		instance.currentPlayer = player;
-
+		
 		saveInstance(instance);
+
+		instance.informSockets = [socket];
 
 		var obj = {};
 		obj.messages = {};
-		obj.informSockets = [];
-		obj.informSockets.push(socket);
-
-		if(Object.keys(instance.sockets).length > 2)
+		if(instance.sockets.length > 2)
 		{
 			obj.messages.message = "A Jugar";
 			obj.messages.player = player;
@@ -36,7 +34,7 @@ module.exports = {
 			obj.messages.start = false;
 		}
 
-		return obj;
+		return obj.messages;
 	},
 
 	resolveGameAction : function (instance, socket, msg)
@@ -172,7 +170,7 @@ function newResponse(sockets, actions)
 {
 	var obj = {};
 	obj.actions = actions;
-	obj.informSockets = sockets;
+	instance.informSockets = sockets;
 	return obj;
 }
 
@@ -188,12 +186,12 @@ function resolveFinaliza()
 
 function resolvePase()
 {
-	return newResponse([instance.sockets[instance.ejecutant.socketId]], [noti.intercepta]);
+	return newResponse([instance.players[instance.ejecutant.socketId].socket], [noti.intercepta]);
 }
 
 function resolveGambeta()
 {
-	return newResponse([instance.sockets[instance.enemy.socketId]], [noti.marca]);
+	return newResponse([instance.players[instance.enemy.socketId].socket], [noti.marca]);
 }
 
 function resolveAtaja()
@@ -202,20 +200,20 @@ function resolveAtaja()
 	//si es gol notifico balon en pie al otro equipo
 	var golNoti = noti.gol;
 	golNoti.fires_action = false;
-	return newResponse([instance.sockets[instance.ejecutant.socketId]], [golNoti]);
+	return newResponse([instance.players[instance.ejecutant.socketId].socket], [golNoti]);
 }
 
 function resolvePatadaAlArco()
 {
-	return newResponse([instance.sockets[instance.enemy.socketId]], [noti.ataja]);
+	return newResponse([instance.players[instance.enemy.socketId].socket], [noti.ataja]);
 }
 function resolveMarca()
 {
 	//si marco bien currentplayer ballon en pie
 	//si ejecutante con ballon en pie
-	return newResponse([instance.sockets[instance.enemy.socketId]], balonEnPie());
+	return newResponse([instance.players[instance.enemy.socketId].socket], balonEnPie());
 }
 function resolveIntercepcion()
 {
-	return newResponse([instance.sockets[instance.enemy.socketId]], balonEnPie());
+	return newResponse([instance.players[instance.enemy.socketId].socket], balonEnPie());
 }

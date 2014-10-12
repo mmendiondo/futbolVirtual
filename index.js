@@ -24,24 +24,28 @@ io.on('connection', function(socket){
 
 	socket.on('disconnect', function() {
 		game.playerDisconnected(instancia, socket);
+		io.emit('chat message', JSON.stringify(instancia));
 	});
 
 	socket.on('chat message', function(msg){
 		io.emit('chat message', msg);
 	});
 
-	socket.on('connect game', function(msg){
+	socket.on('connect game', function(msg){		
+
 		var obj = game.playerConnected(instancia, socket, msg);
 
-		for(var i in Object.keys(obj.informSockets)){
+		for(var i in Object.keys(instancia.informSockets)){
 			obj.informSockets[i].emit('game connected', JSON.stringify(obj.messages));
 		}
+
+		io.emit('chat message', JSON.stringify(instancia));
 	});
 
 	socket.on('game action', function(msg){
 		var obj = game.resolveGameAction(instancia, socket, msg);
 
-		for(var i in Object.keys(obj.informSockets)){
+		for(var i in Object.keys(instancia.informSockets)){
 			obj.informSockets[i].emit('game available actions', JSON.stringify(obj.actions));
 		}
 	});
